@@ -67,11 +67,11 @@ class CaptioningTransformer(nn.Module):
         of captions is provided all at once, we mask out future timesteps.
 
         Inputs:
-         - features: image features, of shape (N, D)
-         - captions: ground truth captions, of shape (N, T)
+        - features: image features, of shape (N, D)
+        - captions: ground truth captions, of shape (N, T)
 
         Returns:
-         - scores: score for each token at each timestep, of shape (N, T, V)
+        - scores: score for each token at each timestep, of shape (N, T, V)
         """
         N, T = captions.shape
         # Create a placeholder, to be overwritten by your code below.
@@ -90,7 +90,11 @@ class CaptioningTransformer(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        captions = self.embedding(captions)
+        captions = self.positional_encoding(captions)
+        features_proj = self.visual_projection(features).unsqueeze(1)
+        tgt_mask = torch.tril(torch.ones(T, T)).bool().to(features.device)
+        scores = self.output(self.transformer(captions, features_proj, tgt_mask))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################

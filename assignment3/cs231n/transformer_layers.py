@@ -38,7 +38,10 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        i = torch.arange(max_len).reshape(-1, 1)
+        div = 10000 ** ( - torch.arange(0, embed_dim, 2) / embed_dim)
+        pe[0, :, 0::2] = torch.sin(i * div)
+        pe[0, :, 1::2] = torch.cos(i * div)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -70,7 +73,7 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        output = self.dropout(x + self.pe[:, :S, :])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -165,12 +168,33 @@ class MultiHeadAttention(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        H, D = self.n_head, self.head_dim
+        # N 代表 batch size
+        # S 代表 source sequence length
+        # T 代表 target sequence length
+        # E 代表 embedding dimension
+        # H 代表 head number
+
+        # from source (第二维是S)
+        Q = self.query(query).reshape(N, S, H, D).permute(0, 2, 1, 3) # H * D 就是 embadding dim
+        # from target (第二维是T)
+        K = self.key(key).reshape(N, T, H, D).permute(0, 2, 1, 3)
+        V = self.value(value).reshape(N, T, H, D).permute(0, 2, 1, 3)
+
+        # 1. matmul and scale
+        mat = torch.matmul(Q, K.permute(0, 1, 3, 2)) / math.sqrt(D) # output is (N, H, S, T)
+        # 2. mask
+        if attn_mask is not None:
+            mat = mat.masked_fill(attn_mask == 0, float('-inf')) # mat is (S, T)
+        # 3. softmax
+        attention = torch.softmax(mat, dim=-1)
+        # 4. dropout and matmul
+        Y = torch.matmul(self.attn_drop(attention), V)
+        # 5. transpose and reshape
+        output = self.proj(Y.permute(0, 2, 1, 3).reshape(N, S, E)) # 把多头的结果合并
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
         return output
-
-
